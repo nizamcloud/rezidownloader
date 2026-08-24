@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
     // ==========================================
-    // 🔑 API KEY & BASE URL (Melalui Netlify Proxy)
+    // 🔑 API KEY & BASE URL (Melalui Vercel / Netlify Proxy)
     // ==========================================
     const API_KEY = 'fs_sk_4g5f1c9v5l1d2t0v2m7y8a5x4f5f'; 
     const BASE_URL = '/api';
@@ -50,23 +50,51 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentQuality = '1080';
     let fetchTimeout = null;
 
-    // --- HELPER UNTUK FETCH AMAN (Mencegah Crash "Unexpected end of JSON") ---
+    // --- HELPER 1: EKSTRAK TEKS ERROR AGAR TIDAK JADI [object Object] ---
+    function parseErrorMessage(data, status) {
+        if (!data) return `Error ${status}: Gagal memproses perintah.`;
+        if (typeof data === 'string') return data;
+        
+        let errStr = data.message || data.error || data.detail || data.msg;
+        
+        // Jika error ternyata berbentuk objek bersarang
+        if (typeof errStr === 'object' && errStr !== null) {
+            errStr = errStr.message || errStr.error || JSON.stringify(errStr);
+        }
+        
+        if (!errStr) {
+            errStr = `Error ${status}: Respon server tidak valid.`;
+        }
+        
+        return String(errStr);
+    }
+
+    // --- HELPER 2: FETCH AMAN (Mengecek Jaringan, HTML Error, & JSON) ---
     async function safeFetchJson(url, options = {}) {
-        const res = await fetch(url, options);
+        let res;
+        try {
+            res = await fetch(url, options);
+        } catch (netErr) {
+            throw new Error('Gagal terhubung (Failed to fetch). Periksa jaringan atau Vercel Proxy.');
+        }
+
         const text = await res.text();
-        let data = {};
+        let data = null;
 
         try {
             data = text ? JSON.parse(text) : {};
         } catch (e) {
             if (res.status === 404) {
-                throw new Error('Proxy Netlify 404: Pastikan file netlify.toml sudah di-push.');
+                throw new Error('Error 404: Route /api tidak ditemukan. Pastikan vercel.json / netlify.toml sudah di-push.');
             }
-            throw new Error(`Server merespon dengan non-JSON (Status ${res.status}).`);
+            if (res.status === 405) {
+                throw new Error('Error 405: Method Not Allowed. Konfigurasi Proxy server belum aktif.');
+            }
+            throw new Error(`Server merespon dengan HTML/Non-JSON (Status ${res.status}).`);
         }
 
         if (!res.ok) {
-            throw new Error(data.message || data.error || `Error ${res.status}: Perintah gagal.`);
+            throw new Error(parseErrorMessage(data, res.status));
         }
 
         return data;
@@ -203,7 +231,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 })
             });
 
-            const downloadUrl = data.downloadUrl || data.url || (data.filename ? `${BASE_URL}/v2/files/${data.filename}` : null);
+            // Cari URL Download di respon API FastSaver
+            const downloadUrl = data.downloadUrl || data.url || (data.filename ? `https://api.fastsaver.io/v2/files/${data.filename}` : null);
 
             if (downloadUrl) {
                 window.open(downloadUrl, '_blank');
@@ -230,7 +259,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             if (data.status === 'completed' || data.status === 'finished') {
-                const link = data.downloadUrl || data.url || `${BASE_URL}/v2/files/${data.filename}`;
+                const link = data.downloadUrl || data.url || `https://api.fastsaver.io/v2/files/${data.filename}`;
                 window.open(link, '_blank');
                 statusText.innerHTML = '<i class="fa-solid fa-circle-check" style="color: var(--vibrant-green)"></i> Unduhan Selesai!';
             } else if (data.status === 'failed') {
