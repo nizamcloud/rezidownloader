@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DOWNLOADER</title>
+    <!-- Google Fonts & Font Awesome -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800;900&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            /* Tema Kertas */
+            --paper-bg: #fffdfa;
+            --paper-texture: #f4eee3;
+            --paper-line: rgba(180, 160, 140, 0.2);
+            --ink-main: #14171f;
+            --ink-muted: #5c6479;
+            --ink-subtle: #8e98b0;
+            
+            /* Warna Hidup (Vibrant Palette) */
+            --vibrant-cyan: #00d2ff;
+            --vibrant-pink: #ff2a85;
+            --vibrant-orange: #ff6b00;
+            --vibrant-yellow: #ffe600;
+            --vibrant-purple: #7928ca;
+            --vibrant-green: #05df72;
+            
+            /* Shadow Kertas Bertumpuk */
+            --paper-shadow: 
+                0 30px 60px -15px rgba(50, 40, 30, 0.18),
+                0 15px 25px -10px rgba(0, 0, 0, 0.08),
+                0 0 0 1px rgba(0, 0, 0, 0.06);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        body {
+            /* Background Meja Studio yang Berwarna & Hidup */
+            background-color: #f7ede2;
+            background-image: 
+                radial-gradient(at 10% 10%, #ffd6e0 0px, transparent 50%),
+                radial-gradient(at 90% 20%, #c5f9d7 0px, transparent 50%),
+                radial-gradient(at 50% 90%, #d5f3fe 0px, transparent 60%),
+                radial-gradient(at 80% 90%, #fbe4ff 0px, transparent 50%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 16px;
+            color: var(--ink-main);
+        }
+
+        .container {
+            width: 100%;
+            max-width: 490px;
+            position: relative;
+        }
+
+        /* Lembaran Kertas Panjang */
+        .paper-sheet {
+            background-color: var(--paper-bg);
+            /* Tekstur Grid Kertas Notebook */
+            background-image: 
+                linear-gradient(var(--paper-line) 1px, transparent 1px),
+                linear-gradient(90deg, var(--paper-line) 1px, transparent 1px);
+            background-size: 20px 20px;
+            border-radius: 20px;
+            padding: 40px 28px 36px 28px;
+            box-shadow: var(--paper-shadow);
+            position: relative;
+            border: 1px solid rgba(220, 210, 195, 0.7);
+        }
+
+        /* Selotip Washi Tape di Atas Kertas */
+        .washi-tape {
+            position: absolute;
+            top: -14px;
+            left: 50%;
+            transform: translateX(-50%) rotate(-1.5deg);
+            width: 130px;
+            height: 32px;
+            background: rgba(255, 230, 0, 0.7);
+            backdrop-filter: blur(2px);
+            border-left: 3px dashed rgba(0, 0, 0, 0.15);
+            border-right: 3px dashed rgba(0, 0, 0, 0.15);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+            z-index: 10;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .header h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 2.2rem;
+            font-weight: 900;
+            letter-spacing: 4px;
+            color: var(--ink-main);
+            position: relative;
+            display: inline-block;
+        }
+
+        /* Garis Stabilo Neon di Bawah Judul */
+        .header h1::after {
+            content: '';
+            position: absolute;
+            bottom: 4px;
+            left: -6px;
+            right: -6px;
+            height: 12px;
+            background: linear-gradient(90deg, #ff2a85, #ff6b00);
+            opacity: 0.35;
+            z-index: -1;
+            transform: rotate(-1deg);
+            border-radius: 4px;
+        }
+
+        .platform-badges {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .platform-tag {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--ink-muted);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 5px 12px;
+            border-radius: 9999px;
+            background: #ffffff;
+            border: 1.5px solid #e5dec9;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+            transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .platform-tag.active.yt { background: #ff0000; color: #ffffff; border-color: #ff0000; box-shadow: 0 4px 12px rgba(255, 0, 0, 0.35); transform: translateY(-2px); }
+        .platform-tag.active.tt { background: #000000; color: #00f2fe; border-color: #000000; box-shadow: 0 4px 12px rgba(0, 242, 254, 0.35); transform: translateY(-2px); }
+        .platform-tag.active.ig { background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); color: #ffffff; border-color: transparent; box-shadow: 0 4px 12px rgba(220, 39, 67, 0.35); transform: translateY(-2px); }
+
+        /* Input URL Bar */
+        .input-box {
+            position: relative;
+            display: flex;
+            align-items: center;
+            margin-bottom: 18px;
+        }
+
+        .input-box input {
+            width: 100%;
+            background: #ffffff;
+            border: 2px solid #e0d7c5;
+            color: var(--ink-main);
+            border-radius: 14px;
+            padding: 16px 86px 16px 18px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            outline: none;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.03);
+            transition: all 0.2s ease;
+        }
+
+        .input-box input:focus {
+            border-color: var(--vibrant-pink);
+            box-shadow: 0 0 0 4px rgba(255, 42, 133, 0.15);
+            background: #ffffff;
+        }
+
+        .input-box input::placeholder {
+            color: #a8b0c4;
+            font-weight: 500;
+        }
+
+        .input-actions {
+            position: absolute;
+            right: 8px;
+            display: flex;
+            gap: 4px;
+        }
+
+        .action-btn {
+            background: #f4eee2;
+            border: 1px solid #ddd2bd;
+            color: var(--ink-muted);
+            padding: 8px 10px;
+            cursor: pointer;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            transition: all 0.2s;
+        }
+
+        .action-btn:hover {
+            color: var(--ink-main);
+            background: #eadecb;
+        }
+
+        /* Preview Card (Kertas Memo Tempel / Polaroid) */
+        .preview-card {
+            display: flex;
+            gap: 14px;
+            background: #ffffff;
+            border: 1.5px solid #e2d7c3;
+            border-radius: 14px;
+            padding: 12px;
+            margin-bottom: 18px;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.05);
+            animation: popIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            transform: rotate(-0.5deg);
+        }
+
+        @keyframes popIn {
+            from { opacity: 0; transform: scale(0.95) translateY(5px); }
+            to { opacity: 1; transform: scale(1) translateY(0) rotate(-0.5deg); }
+        }
+
+        .preview-thumb-wrapper {
+            position: relative;
+            width: 100px;
+            height: 64px;
+            border-radius: 8px;
+            overflow: hidden;
+            flex-shrink: 0;
+            background: #e2d9c8;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+
+        .preview-thumb-wrapper img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .preview-duration {
+            position: absolute;
+            bottom: 4px;
+            right: 4px;
+            background: rgba(20, 23, 31, 0.85);
+            color: #ffffff;
+            font-size: 0.65rem;
+            font-weight: 700;
+            padding: 2px 5px;
+            border-radius: 4px;
+        }
+
+        .preview-info {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .preview-title {
+            font-size: 0.88rem;
+            font-weight: 700;
+            color: var(--ink-main);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 4px;
+        }
+
+        .preview-author {
+            font-size: 0.75rem;
+            color: var(--vibrant-pink);
+            font-weight: 600;
+        }
+
+        /* Format Selection: MP4 vs MP3 (Sticky Notes Terpisah) */
+        .format-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+
+        .format-card {
+            background: #ffffff;
+            border: 2px solid #e0d5c0;
+            border-radius: 16px;
+            padding: 14px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 3px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+            transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .format-card:hover {
+            transform: translateY(-2px);
+            border-color: #c9bda4;
+        }
+
+        .format-card.active {
+            border-color: var(--vibrant-pink);
+            background: #fff0f6;
+            box-shadow: 0 8px 20px rgba(255, 42, 133, 0.18);
+            transform: translateY(-3px);
+        }
+
+        .format-card i {
+            font-size: 1.25rem;
+            color: var(--ink-subtle);
+            margin-bottom: 2px;
+        }
+
+        .format-card.active i {
+            color: var(--vibrant-pink);
+        }
+
+        .format-title {
+            font-size: 0.95rem;
+            font-weight: 800;
+            color: var(--ink-main);
+        }
+
+        .format-subtitle {
+            font-size: 0.72rem;
+            color: var(--ink-muted);
+            font-weight: 600;
+        }
+
+        .format-card.active .format-subtitle {
+            color: var(--vibrant-pink);
+        }
+
+        /* Label Section */
+        .section-label {
+            font-size: 0.75rem;
+            font-weight: 800;
+            letter-spacing: 1px;
+            color: var(--ink-muted);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .section-label::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background: var(--vibrant-orange);
+            border-radius: 2px;
+            display: inline-block;
+        }
+
+        /* Quality Grid Chips */
+        .quality-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 9px;
+            margin-bottom: 22px;
+        }
+
+        .quality-pill {
+            background: #ffffff;
+            border: 2px solid #e4dac7;
+            border-radius: 12px;
+            padding: 10px 6px;
+            text-align: center;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .quality-pill:hover {
+            border-color: #cbbeaa;
+            transform: translateY(-2px);
+        }
+
+        .quality-pill.active {
+            border-color: var(--vibrant-cyan);
+            background: #eefbff;
+            box-shadow: 0 6px 16px rgba(0, 210, 255, 0.25);
+            transform: translateY(-2px) scale(1.02);
+        }
+
+        .quality-pill .res-name {
+            display: block;
+            font-size: 0.88rem;
+            font-weight: 800;
+            color: var(--ink-main);
+        }
+
+        .quality-pill .res-badge {
+            display: inline-block;
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: var(--ink-muted);
+            margin-top: 2px;
+        }
+
+        .quality-pill.active .res-name { color: #007bb5; }
+        .quality-pill.active .res-badge { color: #009ad6; }
+
+        /* Tombol Unduh Hidup (Vibrant Punchy Button) */
+        .submit-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #ff2a85 0%, #ff6b00 50%, #ffe600 100%);
+            color: #ffffff;
+            border: none;
+            border-radius: 16px;
+            padding: 16px;
+            font-size: 1rem;
+            font-weight: 900;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0 10px 25px rgba(255, 42, 133, 0.35);
+            transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .submit-btn:hover:not(:disabled) {
+            transform: translateY(-3px) scale(1.01);
+            box-shadow: 0 15px 30px rgba(255, 42, 133, 0.45);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Status & Progress Bar */
+        .status-container {
+            margin-top: 18px;
+            background: #ffffff;
+            border: 2px solid #e0d5c0;
+            border-radius: 14px;
+            padding: 14px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .status-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.82rem;
+            margin-bottom: 8px;
+        }
+
+        .status-text {
+            color: var(--ink-main);
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .progress-bar-bg {
+            width: 100%;
+            height: 8px;
+            background: #eee5d4;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #ff2a85, #ff6b00, #ffe600, #00d2ff);
+            border-radius: 10px;
+            transition: width 0.3s ease;
+        }
+
+        .progress-bar-fill.indeterminate {
+            width: 45%;
+            animation: moveProgress 1.2s infinite ease-in-out;
+        }
+
+        @keyframes moveProgress {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(300%); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- Lembaran Kertas Utama -->
+        <main class="paper-sheet">
+            <!-- Selotip Hiasan -->
+            <div class="washi-tape"></div>
+
+            <!-- Header -->
+            <header class="header">
+                <h1>DOWNLOADER</h1>
+                <div class="platform-badges">
+                    <span class="platform-tag yt" id="tagYT"><i class="fa-brands fa-youtube"></i> YouTube</span>
+                    <span class="platform-tag tt" id="tagTT"><i class="fa-brands fa-tiktok"></i> TikTok</span>
+                    <span class="platform-tag ig" id="tagIG"><i class="fa-brands fa-instagram"></i> Instagram</span>
+                </div>
+            </header>
+
+            <!-- Form -->
+            <form id="downloadForm">
+                <!-- URL Input -->
+                <div class="input-box">
+                    <input 
+                        type="url" 
+                        id="urlInput" 
+                        placeholder="Tempel tautan video di sini..." 
+                        required 
+                        autocomplete="off"
+                    >
+                    <div class="input-actions">
+                        <button type="button" class="action-btn hidden" id="clearBtn" title="Hapus"><i class="fa-solid fa-xmark"></i></button>
+                        <button type="button" class="action-btn" id="pasteBtn" title="Tempel"><i class="fa-regular fa-clipboard"></i></button>
+                    </div>
+                </div>
+
+                <!-- Preview Media Card (Memo Polaroid) -->
+                <div class="preview-card hidden" id="previewCard">
+                    <div class="preview-thumb-wrapper">
+                        <img id="previewThumb" src="" alt="Thumbnail">
+                        <span class="preview-duration" id="previewDuration">00:00</span>
+                    </div>
+                    <div class="preview-info">
+                        <span class="preview-title" id="previewTitle">Menganalisis link...</span>
+                        <span class="preview-author" id="previewAuthor">Menghubungkan...</span>
+                    </div>
+                </div>
+
+                <!-- Pilihan Format (Terpisah) -->
+                <div class="format-row">
+                    <div class="format-card active" data-format="mp4">
+                        <i class="fa-solid fa-video"></i>
+                        <span class="format-title">MP4</span>
+                        <span class="format-subtitle">Video HD</span>
+                    </div>
+
+                    <div class="format-card" data-format="mp3">
+                        <i class="fa-solid fa-music"></i>
+                        <span class="format-title">MP3</span>
+                        <span class="format-subtitle">Audio HQ</span>
+                    </div>
+                </div>
+
+                <!-- Grid Opsi Resolusi Berwarna -->
+                <div class="section-label" id="qualityLabel">PILIH RESOLUSI VIDEO</div>
+                <div class="quality-grid" id="qualityGrid">
+                    <!-- Diisi otomatis oleh JavaScript -->
+                </div>
+
+                <!-- Tombol Download Gradasi Hidup -->
+                <button type="submit" id="submitBtn" class="submit-btn">
+                    <span id="btnText"><i class="fa-solid fa-cloud-arrow-down"></i> Unduh Sekarang</span>
+                </button>
+            </form>
+
+            <!-- Status & Progress Bar -->
+            <div class="status-container hidden" id="statusBox">
+                <div class="status-header">
+                    <span class="status-text" id="statusText"><i class="fa-solid fa-circle-notch fa-spin"></i> Menyiapkan file...</span>
+                    <span id="statusPercent" style="font-size: 0.75rem; color: var(--ink-muted); font-weight: 700;">PROSES</span>
+                </div>
+                <div class="progress-bar-bg">
+                    <div class="progress-bar-fill indeterminate" id="progressBar"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+  
+	<!-- Panggil file JavaScript di sini (paling bawah) -->
+    <script src="script.js"></script>
+</body>
+</html>
