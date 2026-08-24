@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 🔑 API KEY & BASE URL (Melalui Netlify Proxy)
     // ==========================================
     const API_KEY = 'fs_sk_4g5f1c9v5l1d2t0v2m7y8a5x4f5f'; 
-    const BASE_URL = '/api';
+    const BASE_URL = 'https://api.fastsaver.io';
 
     const urlInput = document.getElementById('urlInput');
     const clearBtn = document.getElementById('clearBtn');
