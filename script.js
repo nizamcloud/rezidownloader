@@ -1,4 +1,10 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // ==========================================
+    // 🔑 MASUKKAN API KEY FASTSAVER KAMU DI SINI
+    // ==========================================
+    const API_KEY = 'fs_sk_4g5f1c9v5l1d2t0v2m7y8a5x4f5f'; 
+    const BASE_URL = 'https://api.fastsaver.io';
+
     const urlInput = document.getElementById('urlInput');
     const clearBtn = document.getElementById('clearBtn');
     const pasteBtn = document.getElementById('pasteBtn');
@@ -41,7 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ];
 
     let currentFormat = 'mp4';
-    let currentQuality = '4320';
+    let currentQuality = '1080';
     let fetchTimeout = null;
 
     // Render Pilihan Kualitas
@@ -51,7 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const items = isVideo ? videoQualities : audioQualities;
         qualityLabel.textContent = isVideo ? 'PILIH RESOLUSI VIDEO' : 'PILIH BITRATE AUDIO';
 
-        if (!isVideo && currentQuality === '4320') currentQuality = '256';
+        if (!isVideo && currentQuality === '1080') currentQuality = '256';
 
         items.forEach(item => {
             const pill = document.createElement('div');
@@ -77,7 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
             formatCards.forEach(c => c.classList.remove('active'));
             card.classList.add('active');
             currentFormat = card.dataset.format;
-            currentQuality = currentFormat === 'mp4' ? '4320' : '256';
+            currentQuality = currentFormat === 'mp4' ? '1080' : '256';
             renderQualityGrid();
         });
     });
@@ -119,48 +125,83 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- BAGIAN KODE BARU DIMULAI DI SINI ---
-
-    // 1. Fungsi Fetch Media Info (Preview Sederhana)
+    // 1. Ambil Informasi Media dari FastSaver API (/v2/media/info)
     async function fetchMediaInfo(url) {
-        previewCard.classList.remove('hidden');
-        previewTitle.textContent = 'Link Siap Diunduh';
-        previewAuthor.textContent = 'Klik tombol di bawah untuk memproses';
-        previewThumb.src = 'https://via.placeholder.com/150?text=READY';
-        previewDuration.textContent = 'MEDIA';
+        try {
+            previewCard.classList.remove('hidden');
+            previewTitle.textContent = 'Menganalisis link...';
+            previewAuthor.textContent = 'Menghubungkan ke FastSaver...';
+            previewThumb.src = '';
+
+            const res = await fetch(`${BASE_URL}/v2/media/info?url=${encodeURIComponent(url)}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${API_KEY}`,
+                    'Accept': 'application/json'
+                }
+            });
+
+            const data = await res.json();
+
+            if (res.ok && (data.title || data.filename)) {
+                previewTitle.textContent = data.title || 'Media Siap Diunduh';
+                previewAuthor.textContent = data.author || data.uploader || 'FastSaver Engine';
+                previewThumb.src = data.thumbnail || 'https://via.placeholder.com/150';
+                previewDuration.textContent = data.duration || 'MEDIA';
+            } else {
+                throw new Error();
+            }
+        } catch (e) {
+            // Tampilan fallback jika info detail media gagal diambil
+            previewTitle.textContent = 'Link Tervalidasi';
+            previewAuthor.textContent = 'Klik tombol di bawah untuk memproses';
+            previewThumb.src = 'https://via.placeholder.com/150?text=READY';
+            previewDuration.textContent = 'MEDIA';
+        }
     }
 
-    // 2. Handler Submit Form (Menggunakan Cobalt API Tanpa Server Backend)
+    // 2. Kirim Request Unduhan ke FastSaver API (/v2/downloads)
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
 
         submitBtn.disabled = true;
         btnText.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memproses...';
         statusBox.classList.remove('hidden');
-        statusText.innerHTML = '<i class="fa-solid fa-gear fa-spin"></i> Menghubungkan ke API...';
+        statusText.innerHTML = '<i class="fa-solid fa-gear fa-spin"></i> Mengirim perintah ke FastSaver API...';
 
         try {
-            const res = await fetch('https://api.cobalt.tools/', {
+            const res = await fetch(`${BASE_URL}/v2/downloads`, {
                 method: 'POST',
                 headers: {
-                    'Accept': 'application/json',
+                    'Authorization': `Bearer ${API_KEY}`,
                     'Content-Type': 'application/json',
-                    'Authorization': 'Bearer PASTE_API_KEY_ANDA_DI_SINI'
+                    'Accept': 'application/json'
                 },
                 body: JSON.stringify({
                     url: urlInput.value.trim(),
-                    videoQuality: currentQuality,
-                    downloadMode: currentFormat === 'mp3' ? 'audio' : 'auto'
+                    format: currentFormat,
+                    quality: currentQuality
                 })
             });
 
             const data = await res.json();
 
-            if (data.url) {
-                window.open(data.url, '_blank');
-                statusText.innerHTML = '<i class="fa-solid fa-circle-check" style="color: var(--vibrant-green)"></i> Unduhan dimulai!';
+            if (!res.ok) {
+                throw new Error(data.message || data.error || 'Gagal terhubung ke API FastSaver.');
+            }
+
+            // Jika API langsung memberikan URL file
+            const downloadUrl = data.downloadUrl || data.url || (data.filename ? `${BASE_URL}/v2/files/${data.filename}` : null);
+
+            if (downloadUrl) {
+                window.open(downloadUrl, '_blank');
+                statusText.innerHTML = '<i class="fa-solid fa-circle-check" style="color: var(--vibrant-green)"></i> Unduhan berhasil dimulai!';
+            } else if (data.id) {
+                // Jika API membutuhkan waktu antrean (Job ID)
+                statusText.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Memproses file di server...';
+                checkJobStatus(data.id);
             } else {
-                throw new Error(data.text || 'Gagal memproses file dari URL tersebut.');
+                throw new Error('Respon server tidak memiliki tautan unduhan.');
             }
         } catch (err) {
             statusText.innerHTML = `<i class="fa-solid fa-triangle-exclamation" style="color: var(--vibrant-pink)"></i> ${err.message}`;
@@ -170,8 +211,29 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- BAGIAN KODE BARU SELESAI ---
+    // 3. Fungsi Tambahan Cek Status Antrean (/v2/downloads/:id)
+    async function checkJobStatus(jobId) {
+        try {
+            const res = await fetch(`${BASE_URL}/v2/downloads/${jobId}`, {
+                headers: { 'Authorization': `Bearer ${API_KEY}` }
+            });
+            const data = await res.json();
 
-    // Inisialisasi awal
+            if (data.status === 'completed' || data.status === 'finished') {
+                const link = data.downloadUrl || data.url || `${BASE_URL}/v2/files/${data.filename}`;
+                window.open(link, '_blank');
+                statusText.innerHTML = '<i class="fa-solid fa-circle-check" style="color: var(--vibrant-green)"></i> Unduhan Selesai!';
+            } else if (data.status === 'failed') {
+                throw new Error(data.error || 'Server gagal memproses file ini.');
+            } else {
+                // Cek ulang secara berulang setiap 2 detik sampai file selesai diproses
+                setTimeout(() => checkJobStatus(jobId), 2000);
+            }
+        } catch (err) {
+            statusText.innerHTML = `<i class="fa-solid fa-triangle-exclamation" style="color: var(--vibrant-pink)"></i> ${err.message}`;
+        }
+    }
+
+    // Inisialisasi awal tampilan
     renderQualityGrid();
 });
