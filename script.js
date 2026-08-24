@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
     // ==========================================
-    // 🔑 MASUKKAN API KEY FASTSAVER KAMU DI SINI
+    // 🔑 API KEY & BASE URL (Melalui Netlify Proxy)
     // ==========================================
     const API_KEY = 'fs_sk_4g5f1c9v5l1d2t0v2m7y8a5x4f5f'; 
     const BASE_URL = '/api';
@@ -49,6 +49,28 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentFormat = 'mp4';
     let currentQuality = '1080';
     let fetchTimeout = null;
+
+    // --- HELPER UNTUK FETCH AMAN (Mencegah Crash "Unexpected end of JSON") ---
+    async function safeFetchJson(url, options = {}) {
+        const res = await fetch(url, options);
+        const text = await res.text();
+        let data = {};
+
+        try {
+            data = text ? JSON.parse(text) : {};
+        } catch (e) {
+            if (res.status === 404) {
+                throw new Error('Proxy Netlify 404: Pastikan file netlify.toml sudah di-push.');
+            }
+            throw new Error(`Server merespon dengan non-JSON (Status ${res.status}).`);
+        }
+
+        if (!res.ok) {
+            throw new Error(data.message || data.error || `Error ${res.status}: Perintah gagal.`);
+        }
+
+        return data;
+    }
 
     // Render Pilihan Kualitas
     function renderQualityGrid() {
@@ -133,7 +155,7 @@ document.addEventListener('DOMContentLoaded', () => {
             previewAuthor.textContent = 'Menghubungkan ke FastSaver...';
             previewThumb.src = '';
 
-            const res = await fetch(`${BASE_URL}/v2/media/info?url=${encodeURIComponent(url)}`, {
+            const data = await safeFetchJson(`${BASE_URL}/v2/media/info?url=${encodeURIComponent(url)}`, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${API_KEY}`,
@@ -141,9 +163,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            const data = await res.json();
-
-            if (res.ok && (data.title || data.filename)) {
+            if (data.title || data.filename) {
                 previewTitle.textContent = data.title || 'Media Siap Diunduh';
                 previewAuthor.textContent = data.author || data.uploader || 'FastSaver Engine';
                 previewThumb.src = data.thumbnail || 'https://via.placeholder.com/150';
@@ -152,7 +172,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error();
             }
         } catch (e) {
-            // Tampilan fallback jika info detail media gagal diambil
             previewTitle.textContent = 'Link Tervalidasi';
             previewAuthor.textContent = 'Klik tombol di bawah untuk memproses';
             previewThumb.src = 'https://via.placeholder.com/150?text=READY';
@@ -170,7 +189,7 @@ document.addEventListener('DOMContentLoaded', () => {
         statusText.innerHTML = '<i class="fa-solid fa-gear fa-spin"></i> Mengirim perintah ke FastSaver API...';
 
         try {
-            const res = await fetch(`${BASE_URL}/v2/downloads`, {
+            const data = await safeFetchJson(`${BASE_URL}/v2/downloads`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${API_KEY}`,
@@ -184,20 +203,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 })
             });
 
-            const data = await res.json();
-
-            if (!res.ok) {
-                throw new Error(data.message || data.error || 'Gagal terhubung ke API FastSaver.');
-            }
-
-            // Jika API langsung memberikan URL file
             const downloadUrl = data.downloadUrl || data.url || (data.filename ? `${BASE_URL}/v2/files/${data.filename}` : null);
 
             if (downloadUrl) {
                 window.open(downloadUrl, '_blank');
                 statusText.innerHTML = '<i class="fa-solid fa-circle-check" style="color: var(--vibrant-green)"></i> Unduhan berhasil dimulai!';
             } else if (data.id) {
-                // Jika API membutuhkan waktu antrean (Job ID)
                 statusText.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Memproses file di server...';
                 checkJobStatus(data.id);
             } else {
@@ -211,13 +222,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // 3. Fungsi Tambahan Cek Status Antrean (/v2/downloads/:id)
+    // 3. Cek Status Antrean (/v2/downloads/:id)
     async function checkJobStatus(jobId) {
         try {
-            const res = await fetch(`${BASE_URL}/v2/downloads/${jobId}`, {
+            const data = await safeFetchJson(`${BASE_URL}/v2/downloads/${jobId}`, {
                 headers: { 'Authorization': `Bearer ${API_KEY}` }
             });
-            const data = await res.json();
 
             if (data.status === 'completed' || data.status === 'finished') {
                 const link = data.downloadUrl || data.url || `${BASE_URL}/v2/files/${data.filename}`;
@@ -226,7 +236,6 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (data.status === 'failed') {
                 throw new Error(data.error || 'Server gagal memproses file ini.');
             } else {
-                // Cek ulang secara berulang setiap 2 detik sampai file selesai diproses
                 setTimeout(() => checkJobStatus(jobId), 2000);
             }
         } catch (err) {
@@ -234,6 +243,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Inisialisasi awal tampilan
+    // Inisialisasi awal
     renderQualityGrid();
 });
