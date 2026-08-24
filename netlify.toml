@@ -1,0 +1,5 @@
+[[redirects]]
+  from = "/api/*"
+  to = "https://api.fastsaver.io/:splat"
+  status = 200
+  force = true
