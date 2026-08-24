@@ -144,7 +144,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 method: 'POST',
                 headers: {
                     'Accept': 'application/json',
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer PASTE_API_KEY_ANDA_DI_SINI'
                 },
                 body: JSON.stringify({
                     url: urlInput.value.trim(),
